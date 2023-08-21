@@ -27,7 +27,7 @@ FASTLED_USING_NAMESPACE
 //#define CLK_PIN   4
 #define LED_TYPE    WS2812
 #define COLOR_ORDER GRB
-#define NUM_LEDS    30
+#define NUM_LEDS    64
 CRGB leds[NUM_LEDS];
 
 #define BRIGHTNESS          96
@@ -54,6 +54,13 @@ byte colPins[COLS] = {7, 6, 5, 4}; //connect to the column pinouts of the keypad
 uint32_t buttonColours[] = {CRGB::Green, CRGB::Blue, CRGB::Red, CRGB::Orange, CRGB::Yellow, CRGB::Black};
 int button1ColourIndex = 0;
 int button2ColourIndex = 0;
+int button3ColourIndex = 0;
+int button4ColourIndex = 0;
+
+int player1[] = {0,21};
+int player2[] = {player1[1],player1[1]+11};
+int player3[] = {player2[1],player2[1]+21};
+int player4[] = {player3[1],player3[1]+11};
 
 //initialize an instance of class NewKeypad
 Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
@@ -141,6 +148,38 @@ void loop()
               Serial.println("holding...");
           }
         } break;
+      case '3': {
+          static unsigned long pressedTime; // static so the value is remembered like a global
+          if (state == PRESSED) {
+            pressedTime = millis();
+          } else if (state == RELEASED) {
+            if (millis() - pressedTime > LongPress) {
+              //handleLongPress();
+              Serial.println("LONG*** press");
+            } else {
+              Serial.println("SHORT press");
+              button3ShortPress();
+            }
+          } else if (state == HOLD) {
+              Serial.println("holding...");
+          }
+        } break;
+      case '4': {
+          static unsigned long pressedTime; // static so the value is remembered like a global
+          if (state == PRESSED) {
+            pressedTime = millis();
+          } else if (state == RELEASED) {
+            if (millis() - pressedTime > LongPress) {
+              //handleLongPress();
+              Serial.println("LONG*** press");
+            } else {
+              Serial.println("SHORT press");
+              button4ShortPress();
+            }
+          } else if (state == HOLD) {
+              Serial.println("holding...");
+          }
+        } break;
       case '0': {
           // all OFF
           allLEDsOff();
@@ -179,7 +218,7 @@ void button1ShortPress() {
   button1ColourIndex++;
   button1ColourIndex = button1ColourIndex % (sizeof(buttonColours) / sizeof((buttonColours)[0]));
 
-  for (int dot = 0; dot < 10; dot++) {
+  for (int dot = player1[0]; dot < player1[1]; dot++) {
     leds[dot] = buttonColours[button1ColourIndex];
   }
   FastLED.show();
@@ -192,8 +231,34 @@ void button2ShortPress() {
   button2ColourIndex++;
   button2ColourIndex = button2ColourIndex % (sizeof(buttonColours) / sizeof((buttonColours)[0]));
 
-  for (int dot = 11; dot < 20; dot++) {
+  for (int dot = player2[0]; dot < player2[1]; dot++) {
     leds[dot] = buttonColours[button2ColourIndex];
+  }
+  FastLED.show();
+}
+
+void button3ShortPress() {
+  Serial.println("button 3 short");
+  // light 'em up!
+  random_mode = false;
+  button3ColourIndex++;
+  button3ColourIndex = button3ColourIndex % (sizeof(buttonColours) / sizeof((buttonColours)[0]));
+
+  for (int dot = player3[0]; dot < player3[1]; dot++) {
+    leds[dot] = buttonColours[button3ColourIndex];
+  }
+  FastLED.show();
+}
+
+void button4ShortPress() {
+  Serial.println("button 4 short");
+  // light 'em up!
+  random_mode = false;
+  button4ColourIndex++;
+  button4ColourIndex = button4ColourIndex % (sizeof(buttonColours) / sizeof((buttonColours)[0]));
+
+  for (int dot = player4[0]; dot < player4[1]; dot++) {
+    leds[dot] = buttonColours[button4ColourIndex];
   }
   FastLED.show();
 }
