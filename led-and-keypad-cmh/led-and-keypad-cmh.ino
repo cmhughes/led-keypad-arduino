@@ -1,10 +1,13 @@
 //
-// helpful:
+// most helpful:
+//    https://forum.arduino.cc/t/arduino-uno-event-keypad-implementation/476904/19
+//
+// references:
 //    https://github.com/FastLED/FastLED/wiki/Basic-usage
 //    https://www.quora.com/In-Arduino-how-to-measure-exact-time-between-two-events-happening-eg-sensor-interrupted-Is-there-any-specific-function
 //
 #include <FastLED.h>
-#include "Adafruit_Keypad.h"
+#include "Keypad.h"
 
 FASTLED_USING_NAMESPACE
 
@@ -45,30 +48,45 @@ char keys[ROWS][COLS] = {
 byte rowPins[ROWS] = {11, 10, 9, 8}; //connect to the row pinouts of the keypad
 byte colPins[COLS] = {7, 6, 5, 4}; //connect to the column pinouts of the keypad
 
-int button1PRESSEventTime;
-int button1PressHOLDtime = 0;
-bool button1PRESSED = false;
-uint32_t button1Colours[] = {CRGB::Green, CRGB::Blue, CRGB::Red, CRGB::Orange, CRGB::Yellow};
+// 
+// LED stuff
+//
+uint32_t buttonColours[] = {CRGB::Green, CRGB::Blue, CRGB::Red, CRGB::Orange, CRGB::Yellow, CRGB::Black};
 int button1ColourIndex = 0;
+int button2ColourIndex = 0;
 
 //initialize an instance of class NewKeypad
-Adafruit_Keypad customKeypad = Adafruit_Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS);
+Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
+
+const unsigned long LongPress = 1000;
+bool random_mode = false;
 
 void setup() {
   delay(3000); // 3 second delay for recovery
 
   // tell FastLED about the LED strip configuration
   FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
-  //FastLED.addLeds<LED_TYPE,DATA_PIN,CLK_PIN,COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
 
   // set master brightness control
   FastLED.setBrightness(BRIGHTNESS);
   Serial.begin(9600);
 
-  customKeypad.begin();
+  Serial.println("hello world");
 
+  // blink the lights during setup
+  for (int index = 0; index<3; index++){
+      for (int dot = 0; dot < NUM_LEDS; dot++) {
+        leds[dot] = CRGB::Green;
+      }
+      FastLED.show();
+      delay(500);
+      for (int dot = 0; dot < NUM_LEDS; dot++) {
+        leds[dot] = CRGB::Black;
+      }
+      FastLED.show();
+      delay(500);
+  }
 }
-
 
 // List of patterns to cycle through.  Each is defined as a separate function below.
 typedef void (*SimplePatternList[])();
@@ -77,79 +95,124 @@ SimplePatternList gPatterns = { rainbow, rainbowWithGlitter, confetti, sinelon, 
 uint8_t gCurrentPatternNumber = 0; // Index number of which pattern is current
 uint8_t gHue = 0; // rotating "base color" used by many of the patterns
 
+//
+// main loop
+//
 void loop()
 {
+  if (keypad.getKeys()) // check for keypad activity
+  {
+    // we won't handle multiple keypresses, just single ones, so just key index 0
+    const byte key = keypad.key[0].kchar;
+    const byte state = keypad.key[0].kstate; // IDLE, PRESSED, HOLD, RELEASED
 
-  customKeypad.tick();
+    switch (key) {
 
-  // button 1
-  if (button1PRESSED) {
-    button1PressHOLDtime  = millis() -  button1PRESSEventTime;
-    button1Behaviour();
-  }
+      case '1': {
+          static unsigned long pressedTime; // static so the value is remembered like a global
+          if (state == PRESSED) {
+            pressedTime = millis();
+          } else if (state == RELEASED) {
+            if (millis() - pressedTime > LongPress) {
+              //handleLongPress();
+              Serial.println("LONG*** press");
+            } else {
+              Serial.println("SHORT press");
+              button1ShortPress();
+            }
+          } else if (state == HOLD) {
+              Serial.println("holding...");
+          }
+        } break;
 
-  // check keypad
-  if (customKeypad.available()) {
-    keypadEvent e = customKeypad.read();
+      case '2': {
+          static unsigned long pressedTime; // static so the value is remembered like a global
+          if (state == PRESSED) {
+            pressedTime = millis();
+          } else if (state == RELEASED) {
+            if (millis() - pressedTime > LongPress) {
+              //handleLongPress();
+              Serial.println("LONG*** press");
+            } else {
+              Serial.println("SHORT press");
+              button2ShortPress();
+            }
+          } else if (state == HOLD) {
+              Serial.println("holding...");
+          }
+        } break;
+      case '0': {
+          // all OFF
+          allLEDsOff();
+        } break;
+      case '*': {
+          // random mode on!
+          allLEDsOff();
+          if (random_mode){
+             random_mode = false;
+          } else {
+             random_mode = true;
+          }
+        } break;
 
-    // button 1
-    if ((char)e.bit.KEY == '1') {
-
-      // has the 1 button just been pressed?
-      if (e.bit.EVENT == KEY_JUST_PRESSED) {
-        button1PRESSEventTime = millis();
-        button1PressHOLDtime = 0;
-        button1PRESSED = true;
-      } else if (e.bit.EVENT == KEY_JUST_RELEASED) {
-        // reset button 1 press
-        button1PRESSEventTime = 0;
-        button1PRESSED = false;
-      }
-
-      button1Behaviour();
-
-    } else if ((char)e.bit.KEY == '2') {
-      for (int dot = 0; dot < 10; dot++) {
-        leds[dot] = CRGB::Blue;
-      }
-      FastLED.show();
-    } else if ((char)e.bit.KEY == '0') {
-      // clear this led for the next time around the loop
-      for (int dot = 0; dot < NUM_LEDS; dot++) {
-        leds[dot] = CRGB::Black;
-      }
-      FastLED.show();
     }
+  } else if (random_mode){
+    // taken directly from FastLED DemoReel100
+    // Call the current pattern function once, updating the 'leds' array
+    gPatterns[gCurrentPatternNumber]();
+
+    // send the 'leds' array out to the actual LED strip
+    FastLED.show();
+    // insert a delay to keep the framerate modest
+    FastLED.delay(1000/FRAMES_PER_SECOND);
+
+    // do some periodic updates
+    EVERY_N_MILLISECONDS( 20 ) { gHue++; } // slowly cycle the "base color" through the rainbow
+    EVERY_N_SECONDS( 10 ) { nextPattern(); } // change patterns periodically
   }
 }
 
-//
-// button 1 control
-//
-void button1Behaviour()
-{
+void button1ShortPress() {
+  Serial.println("button 1 short");
+  // light 'em up!
+  random_mode = false;
+  button1ColourIndex++;
+  button1ColourIndex = button1ColourIndex % (sizeof(buttonColours) / sizeof((buttonColours)[0]));
 
-  if (button1PressHOLDtime > 1000) {
-    // light 'em up!
-    for (int dot = 0; dot < 10; dot++) {
-      leds[dot] = button1Colours[button1ColourIndex];
-    }
-    FastLED.show();
-    delay(500);
-    for (int dot = 0; dot < 10; dot++) {
-      leds[dot] = CRGB::Black;
-    }
-    FastLED.show();
-    delay(500);
-  } else {
-    // light 'em up!
-    for (int dot = 0; dot < 10; dot++) {
-      leds[dot] = CRGB::Red;
-    }
-    FastLED.show();
+  for (int dot = 0; dot < 10; dot++) {
+    leds[dot] = buttonColours[button1ColourIndex];
   }
+  FastLED.show();
 }
 
+void button2ShortPress() {
+  Serial.println("button 2 short");
+  // light 'em up!
+  random_mode = false;
+  button2ColourIndex++;
+  button2ColourIndex = button2ColourIndex % (sizeof(buttonColours) / sizeof((buttonColours)[0]));
+
+  for (int dot = 11; dot < 20; dot++) {
+    leds[dot] = buttonColours[button2ColourIndex];
+  }
+  FastLED.show();
+}
+
+void allLEDsOff() {
+  // all off
+  Serial.println("button 0: all off");
+  random_mode = false;
+
+  for (int dot = 0; dot < NUM_LEDS; dot++) {
+    leds[dot] = CRGB::Black;
+  }
+  FastLED.show();
+  random_mode = false;
+}
+
+//
+// from FASTLED examples, DemoReel100
+//
 #define ARRAY_SIZE(A) (sizeof(A) / sizeof((A)[0]))
 
 void nextPattern()
@@ -173,7 +236,7 @@ void rainbowWithGlitter()
 
 void addGlitter( fract8 chanceOfGlitter)
 {
-  if ( random8() < chanceOfGlitter) {
+  if( random8() < chanceOfGlitter) {
     leds[ random16(NUM_LEDS) ] += CRGB::White;
   }
 }
@@ -190,7 +253,7 @@ void sinelon()
 {
   // a colored dot sweeping back and forth, with fading trails
   fadeToBlackBy( leds, NUM_LEDS, 20);
-  int pos = beatsin16( 13, 0, NUM_LEDS - 1 );
+  int pos = beatsin16( 13, 0, NUM_LEDS-1 );
   leds[pos] += CHSV( gHue, 255, 192);
 }
 
@@ -200,8 +263,8 @@ void bpm()
   uint8_t BeatsPerMinute = 62;
   CRGBPalette16 palette = PartyColors_p;
   uint8_t beat = beatsin8( BeatsPerMinute, 64, 255);
-  for ( int i = 0; i < NUM_LEDS; i++) { //9948
-    leds[i] = ColorFromPalette(palette, gHue + (i * 2), beat - gHue + (i * 10));
+  for( int i = 0; i < NUM_LEDS; i++) { //9948
+    leds[i] = ColorFromPalette(palette, gHue+(i*2), beat-gHue+(i*10));
   }
 }
 
@@ -209,8 +272,9 @@ void juggle() {
   // eight colored dots, weaving in and out of sync with each other
   fadeToBlackBy( leds, NUM_LEDS, 20);
   uint8_t dothue = 0;
-  for ( int i = 0; i < 8; i++) {
-    leds[beatsin16( i + 7, 0, NUM_LEDS - 1 )] |= CHSV(dothue, 200, 255);
+  for( int i = 0; i < 8; i++) {
+    leds[beatsin16( i+7, 0, NUM_LEDS-1 )] |= CHSV(dothue, 200, 255);
     dothue += 32;
   }
 }
+
