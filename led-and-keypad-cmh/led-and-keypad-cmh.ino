@@ -1,10 +1,14 @@
-//
-// most helpful:
-//    https://forum.arduino.cc/t/arduino-uno-event-keypad-implementation/476904/19
+// 
+// ARDUINO sketch to control LED strips using a keypad
 //
 // references:
-//    https://github.com/FastLED/FastLED/wiki/Basic-usage
-//    https://www.quora.com/In-Arduino-how-to-measure-exact-time-between-two-events-happening-eg-sensor-interrupted-Is-there-any-specific-function
+//
+//    most helpful:
+//      https://forum.arduino.cc/t/arduino-uno-event-keypad-implementation/476904/19
+//
+//    additional:
+//      https://github.com/FastLED/FastLED/wiki/Basic-usage
+//      https://www.quora.com/In-Arduino-how-to-measure-exact-time-between-two-events-happening-eg-sensor-interrupted-Is-there-any-specific-function
 //
 #include <FastLED.h>
 #include "Keypad.h"
@@ -23,11 +27,10 @@ FASTLED_USING_NAMESPACE
 //
 // LED stuff
 //
-#define DATA_PIN    3
-//#define CLK_PIN   4
+#define DATA_PIN    5
 #define LED_TYPE    WS2812
 #define COLOR_ORDER GRB
-#define NUM_LEDS    64
+#define NUM_LEDS    63
 CRGB leds[NUM_LEDS];
 
 #define BRIGHTNESS          96
@@ -45,19 +48,19 @@ char keys[ROWS][COLS] = {
   {'7', '8', '9', 'C'},
   {'*', '0', '#', 'D'}
 };
-byte rowPins[ROWS] = {11, 10, 9, 8}; //connect to the row pinouts of the keypad
-byte colPins[COLS] = {7, 6, 5, 4}; //connect to the column pinouts of the keypad
+byte rowPins[ROWS] = {4, 3, 2, A3}; //connect to the row pinouts of the keypad
+byte colPins[COLS] = {A2, A1, A0}; //connect to the column pinouts of the keypad
 
 // 
 // LED stuff
 //
-uint32_t buttonColours[] = {CRGB::Green, CRGB::Blue, CRGB::Red, CRGB::Orange, CRGB::Yellow, CRGB::Black};
+uint32_t buttonColours[] = {CRGB::Green, CRGB::Blue, CRGB::Red, CRGB::Orange, CRGB::Yellow, CRGB:: Purple, CRGB::Black};
 int button1ColourIndex = 0;
 int button2ColourIndex = 0;
 int button3ColourIndex = 0;
 int button4ColourIndex = 0;
 
-int player1[] = {0,21};
+int player1[] = {0,20};
 int player2[] = {player1[1],player1[1]+11};
 int player3[] = {player2[1],player2[1]+21};
 int player4[] = {player3[1],player3[1]+11};
@@ -95,7 +98,11 @@ void setup() {
   }
 }
 
+// 
 // List of patterns to cycle through.  Each is defined as a separate function below.
+//
+// from FASTLED examples, DemoReel100
+//
 typedef void (*SimplePatternList[])();
 SimplePatternList gPatterns = { rainbow, rainbowWithGlitter, confetti, sinelon, juggle, bpm };
 
@@ -107,6 +114,10 @@ uint8_t gHue = 0; // rotating "base color" used by many of the patterns
 //
 void loop()
 {
+  //
+  // reference:
+  //    https://forum.arduino.cc/t/arduino-uno-event-keypad-implementation/476904/19
+  //
   if (keypad.getKeys()) // check for keypad activity
   {
     // we won't handle multiple keypresses, just single ones, so just key index 0
@@ -180,6 +191,46 @@ void loop()
               Serial.println("holding...");
           }
         } break;
+      case '5': {
+          if (state == PRESSED) {
+            for (int dot = 0; dot < NUM_LEDS; dot++) {
+              leds[dot] = CRGB::Red;
+            }
+            FastLED.show();
+          } 
+      } break;
+      case '6': {
+          if (state == PRESSED) {
+            for (int dot = 0; dot < NUM_LEDS; dot++) {
+              leds[dot] = CRGB::Purple;
+            }
+            FastLED.show();
+          } 
+      } break;
+      case '7': {
+          if (state == PRESSED) {
+            for (int dot = 0; dot < NUM_LEDS; dot++) {
+              leds[dot] = CRGB::Yellow;
+            }
+            FastLED.show();
+          } 
+      } break;
+      case '8': {
+          if (state == PRESSED) {
+            for (int dot = 0; dot < NUM_LEDS; dot++) {
+              leds[dot] = CRGB::Green;
+            }
+            FastLED.show();
+          } 
+      } break;
+      case '9': {
+          if (state == PRESSED) {
+            for (int dot = 0; dot < NUM_LEDS; dot++) {
+              leds[dot] = CRGB::Blue;
+            }
+            FastLED.show();
+          } 
+      } break;
       case '0': {
           // all OFF
           allLEDsOff();
